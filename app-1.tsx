@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,17 +8,28 @@ import {
   Animated,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
 
-  const [nome, setNome] = useState('');
-  const [nomeSalvo, setNomeSalvo] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [usuarioLogado, setUsuarioLogado] = useState(null);
 
   const scaleValue = useRef(new Animated.Value(1)).current;
-
-  // Animação do texto
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    carregarUsuario();
+  }, []);
+
+  const carregarUsuario = async () => {
+    const usuarioSalvo = await AsyncStorage.getItem('usuario');
+    if (usuarioSalvo) {
+      setUsuarioLogado(JSON.parse(usuarioSalvo));
+    }
+  };
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, {
@@ -36,20 +47,23 @@ export default function App() {
     }).start();
   };
 
-  const salvarNome = () => {
-    if (nome.trim() === '') {
-      Alert.alert('Atenção', 'Digite um nome antes de salvar!');
+  const fazerLogin = async () => {
+    if (email.trim() === '' || senha.trim() === '') {
+      Alert.alert('Erro', 'Preencha todos os campos!');
       return;
     }
 
-    setNomeSalvo(nome);
-    setNome('');
+    const usuario = { email, senha };
 
-    // Reset da animação
+    await AsyncStorage.setItem('usuario', JSON.stringify(usuario));
+    setUsuarioLogado(usuario);
+
+    setEmail('');
+    setSenha('');
+
     fadeAnim.setValue(0);
     slideAnim.setValue(20);
 
-    // Executa animação
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -64,42 +78,66 @@ export default function App() {
     ]).start();
   };
 
-  return(
+  const logout = async () => {
+    await AsyncStorage.removeItem('usuario');
+    setUsuarioLogado(null);
+  };
+
+  return (
     <View style={styles.container}>
       <View style={styles.card}>
-        
-        <Text style={styles.title}>Meu Primeiro App</Text>
 
-        <TextInput 
-          style={styles.input} 
-          placeholder="Digite seu nome"
-          placeholderTextColor="#999"
-          value={nome}
-          onChangeText={setNome}
-        />
+        <Text style={styles.title}>Tela de Login</Text>
 
-        <TouchableWithoutFeedback
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          onPress={salvarNome}
-        >
-          <Animated.View style={[styles.button, { transform: [{ scale: scaleValue }] }]}>
-            <Text style={styles.buttonText}>Salvar</Text>
-          </Animated.View>
-        </TouchableWithoutFeedback>
+        {usuarioLogado ? (
+          <>
+            <Animated.Text
+              style={[
+                styles.resultado,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              ✅ Bem-vindo, {usuarioLogado.email}
+            </Animated.Text>
 
-        {nomeSalvo !== '' && (
-          <Animated.Text
-            style={[
-              styles.resultado,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
-            👋 Olá, {nomeSalvo}!
-          </Animated.Text>
+            <TouchableWithoutFeedback onPress={logout}>
+              <View style={[styles.button, { marginTop: 20, backgroundColor: '#D00000' }]}>
+                <Text style={styles.buttonText}>Sair</Text>
+              </View>
+            </TouchableWithoutFeedback>
+          </>
+        ) : (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Digite seu email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Digite sua senha"
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry
+            />
+
+            <TouchableWithoutFeedback
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              onPress={fazerLogin}
+            >
+              <Animated.View style={[styles.button, { transform: [{ scale: scaleValue }] }]}>
+                <Text style={styles.buttonText}>Entrar</Text>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </>
         )}
 
       </View>
@@ -108,34 +146,26 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     backgroundColor: "#F3F0FF",
     justifyContent: "center",
     alignItems: "center",
   },
-
   card: {
     width: "85%",
     backgroundColor: "#FFFFFF",
     padding: 30,
     borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
     elevation: 10,
   },
-
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#5A189A",
     textAlign: "center",
     marginBottom: 30,
   },
-
   input: {
     width: "100%",
     height: 50,
@@ -147,27 +177,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: "#FAFAFA",
   },
-
   button: {
     backgroundColor: "#7B2CBF",
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: "center",
   },
-
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
-    letterSpacing: 1,
   },
-
   resultado: {
-    marginTop: 25,
-    fontSize: 20,
+    fontSize: 18,
     textAlign: "center",
     color: "#5A189A",
     fontWeight: "600",
   }
-
 });
