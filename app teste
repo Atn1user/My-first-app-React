@@ -1,67 +1,173 @@
-
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableWithoutFeedback,
+  Animated,
+  Alert,
+} from 'react-native';
 
 export default function App() {
-    return(
-      <View style={styles.container}>
-       
-       {/* HEADER */}
-       <Text style={styles.header}>Meu Primeiro App</Text>
 
-       <TextInput 
-         style={styles.input} 
-         placeholder="Qual seu Nome?"
-         placeholderTextColor="#DDD"
-       />
+  const [nome, setNome] = useState('');
+  const [nomeSalvo, setNomeSalvo] = useState('');
 
-       <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>Salvar</Text>
-       </TouchableOpacity>
+  const scaleValue = useRef(new Animated.Value(1)).current;
+
+  // Animação do texto
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleValue, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const salvarNome = () => {
+    if (nome.trim() === '') {
+      Alert.alert('Atenção', 'Digite um nome antes de salvar!');
+      return;
+    }
+
+    setNomeSalvo(nome);
+    setNome('');
+
+    // Reset da animação
+    fadeAnim.setValue(0);
+    slideAnim.setValue(20);
+
+    // Executa animação
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      })
+    ]).start();
+  };
+
+  return(
+    <View style={styles.container}>
+      <View style={styles.card}>
+        
+        <Text style={styles.title}>Meu Primeiro App</Text>
+
+        <TextInput 
+          style={styles.input} 
+          placeholder="Digite seu nome"
+          placeholderTextColor="#999"
+          value={nome}
+          onChangeText={setNome}
+        />
+
+        <TouchableWithoutFeedback
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          onPress={salvarNome}
+        >
+          <Animated.View style={[styles.button, { transform: [{ scale: scaleValue }] }]}>
+            <Text style={styles.buttonText}>Salvar</Text>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+
+        {nomeSalvo !== '' && (
+          <Animated.Text
+            style={[
+              styles.resultado,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            👋 Olá, {nomeSalvo}!
+          </Animated.Text>
+        )}
 
       </View>
-    );
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    justifyContent: "flex-start", // agora começa do topo
+    backgroundColor: "#F3F0FF",
+    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#4B0082",
-    paddingTop: 80, // espaço no topo
   },
 
-  header: {
-    fontSize: 32, 
-    color: "#FFFFFF",
+  card: {
+    width: "85%",
+    backgroundColor: "#FFFFFF",
+    padding: 30,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+
+  title: {
+    fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 40,
+    color: "#5A189A",
+    textAlign: "center",
+    marginBottom: 30,
   },
 
   input: {
-    backgroundColor: "#7B2CBF",
-    textAlign: "center",
-    width: "70%",
+    width: "100%",
     height: 50,
-    marginBottom: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#CDB4DB",
-    paddingHorizontal: 10,
+    borderColor: "#DDD",
+    paddingHorizontal: 15,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: "#FAFAFA",
   },
 
   button: {
-    backgroundColor: "#FFFFFF",
-    width: "40%",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#7B2CBF",
+    paddingVertical: 15,
+    borderRadius: 12,
     alignItems: "center",
   },
 
   buttonText: {
-    color: "#4B0082",
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "bold",
+    letterSpacing: 1,
+  },
+
+  resultado: {
+    marginTop: 25,
+    fontSize: 20,
+    textAlign: "center",
+    color: "#5A189A",
+    fontWeight: "600",
   }
 
 });
